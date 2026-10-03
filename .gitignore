@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Downloaded optional model weights (fetched by scripts/download_models.py)
+models/*.prototxt
+models/*.caffemodel
+
+# Local test artifacts
+tests/_synthetic_test.jpg
+tests/_no_exif.png
+*.log
+
+# Runtime data — scan history and login credentials/sessions are
+# per-install state, not source. If you fork this project, you almost
+# certainly don't want your own auth_config.yaml (real password hashes
+# and cookie signing key) or scan_history.db committed to a public repo.
+data/*.db
+auth_config.yaml
+
+# OS junk
+.DS_Store
+Thumbs.db

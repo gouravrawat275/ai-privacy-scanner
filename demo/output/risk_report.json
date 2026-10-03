@@ -1,0 +1,231 @@
+{
+  "detections": {
+    "faces": [],
+    "plates": [
+      {
+        "type": "plate",
+        "bbox": [
+          593,
+          192,
+          266,
+          89
+        ],
+        "confidence": null
+      },
+      {
+        "type": "plate",
+        "bbox": [
+          687,
+          389,
+          180,
+          60
+        ],
+        "confidence": null
+      },
+      {
+        "type": "plate",
+        "bbox": [
+          279,
+          268,
+          364,
+          122
+        ],
+        "confidence": null
+      }
+    ],
+    "ocr": {
+      "enabled": false,
+      "raw_text": "",
+      "findings": [],
+      "error": "Tesseract binary not found or failed to run."
+    },
+    "child_flags": [],
+    "metadata": {
+      "has_exif": true,
+      "has_gps": true,
+      "findings": [
+        {
+          "type": "gps_location",
+          "message": "This image contains embedded GPS coordinates revealing where it was taken."
+        }
+      ],
+      "raw": {
+        "GPSInfo": {
+          "GPSLatitudeRef": "N",
+          "GPSLatitude": [
+            "26.0",
+            "55.0",
+            "12.0"
+          ],
+          "GPSLongitudeRef": "E",
+          "GPSLongitude": [
+            "75.0",
+            "49.0",
+            "18.0"
+          ]
+        }
+      }
+    },
+    "background_objects": [],
+    "visual_location": {
+      "has_visual_location_risk": false,
+      "location_revealed": false,
+      "risk_score": 0,
+      "findings": [],
+      "location_bucket": null,
+      "scene_labels": [],
+      "overall_confidence": 0.0,
+      "explanation": "No location-revealing content detected in the image's visual content."
+    },
+    "consent": {
+      "can_share": true,
+      "overall_decision": "APPROVED",
+      "policy": "STRICT",
+      "target_scope": "social_media",
+      "faces_evaluated": 0,
+      "faces_passed": 0,
+      "faces_gated": 0,
+      "face_decisions": [],
+      "redaction_boxes": [],
+      "summary_reasons": [
+        "No faces detected in image."
+      ]
+    },
+    "pattern_risk": {
+      "pattern_score": 12,
+      "pattern_level": "Low",
+      "risk_level": "LOW",
+      "patterns": [
+        {
+          "type": "temporal_routine",
+          "detail": "Images consistently taken on Fridays during midday (3 occurrences)",
+          "day_of_week": 4,
+          "hour_bucket": 2,
+          "count": 3,
+          "dates": [
+            "2026-10-02T12:37:23+00:00",
+            "2026-10-02T12:34:12+00:00",
+            "2026-10-02T12:33:37+00:00"
+          ],
+          "severity": "medium"
+        }
+      ],
+      "detected_patterns": [
+        {
+          "type": "temporal_routine",
+          "detail": "Images consistently taken on Fridays during midday (3 occurrences)",
+          "day_of_week": 4,
+          "hour_bucket": 2,
+          "count": 3,
+          "dates": [
+            "2026-10-02T12:37:23+00:00",
+            "2026-10-02T12:34:12+00:00",
+            "2026-10-02T12:33:37+00:00"
+          ],
+          "severity": "medium"
+        }
+      ],
+      "total_scans_in_window": 6,
+      "window_days": 30,
+      "explanation": "\u26a0\ufe0f Cross-session pattern analysis found the following:\n  1. [MEDIUM] Images consistently taken on Fridays during midday (3 occurrences)\n\nThese patterns, while each image may be individually low-risk, could collectively reveal your routine, location, or habits."
+    }
+  },
+  "risk": {
+    "score": 85,
+    "level": "Critical",
+    "breakdown": [
+      {
+        "category": "License Plate",
+        "detail": "plate detected",
+        "points": 20
+      },
+      {
+        "category": "License Plate",
+        "detail": "plate detected",
+        "points": 20
+      },
+      {
+        "category": "License Plate",
+        "detail": "plate detected",
+        "points": 20
+      },
+      {
+        "category": "Metadata",
+        "detail": "GPS location embedded in EXIF metadata",
+        "points": 25
+      }
+    ],
+    "suggestions": [
+      "Blur license plates to prevent vehicle tracking or location inference.",
+      "Strip EXIF/GPS metadata before posting \u2014 otherwise your coordinates are embedded in the file."
+    ]
+  },
+  "visual_location": {
+    "has_visual_location_risk": false,
+    "location_revealed": false,
+    "risk_score": 0,
+    "findings": [],
+    "location_bucket": null,
+    "scene_labels": [],
+    "overall_confidence": 0.0,
+    "explanation": "No location-revealing content detected in the image's visual content."
+  },
+  "consent": {
+    "can_share": true,
+    "overall_decision": "APPROVED",
+    "policy": "STRICT",
+    "target_scope": "social_media",
+    "faces_evaluated": 0,
+    "faces_passed": 0,
+    "faces_gated": 0,
+    "face_decisions": [],
+    "redaction_boxes": [],
+    "summary_reasons": [
+      "No faces detected in image."
+    ]
+  },
+  "pattern_risk": {
+    "pattern_score": 12,
+    "pattern_level": "Low",
+    "risk_level": "LOW",
+    "patterns": [
+      {
+        "type": "temporal_routine",
+        "detail": "Images consistently taken on Fridays during midday (3 occurrences)",
+        "day_of_week": 4,
+        "hour_bucket": 2,
+        "count": 3,
+        "dates": [
+          "2026-10-02T12:37:23+00:00",
+          "2026-10-02T12:34:12+00:00",
+          "2026-10-02T12:33:37+00:00"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "detected_patterns": [
+      {
+        "type": "temporal_routine",
+        "detail": "Images consistently taken on Fridays during midday (3 occurrences)",
+        "day_of_week": 4,
+        "hour_bucket": 2,
+        "count": 3,
+        "dates": [
+          "2026-10-02T12:37:23+00:00",
+          "2026-10-02T12:34:12+00:00",
+          "2026-10-02T12:33:37+00:00"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "total_scans_in_window": 6,
+    "window_days": 30,
+    "explanation": "\u26a0\ufe0f Cross-session pattern analysis found the following:\n  1. [MEDIUM] Images consistently taken on Fridays during midday (3 occurrences)\n\nThese patterns, while each image may be individually low-risk, could collectively reveal your routine, location, or habits."
+  },
+  "image_shape": [
+    650,
+    1000,
+    3
+  ],
+  "scan_hash": "cda14aa11e4fc29b"
+}
