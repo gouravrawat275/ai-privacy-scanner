@@ -72,7 +72,6 @@ div[data-testid="stMetricValue"] > div {
 def _login_screen():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     st.title("🛡️ AI Privacy Scanner & Defense System")
-    st.caption("Provisional Patent Implementation: Predictive, Cross-Session, Consent-Aware, and Cryptographically Reversible Privacy Protection.")
 
     config = load_or_init_config()
     usernames = config["credentials"]["usernames"]
@@ -92,6 +91,7 @@ def _login_screen():
                 if submitted:
                     if verify_password(username, password, config):
                         st.session_state["app_user"] = username
+                        st.session_state["app_user_name"] = usernames[username].get("name", username)
                         st.session_state["app_authenticated"] = True
                         st.rerun()
                     else:
@@ -107,8 +107,12 @@ def _login_screen():
                 created = st.form_submit_button("Create Account", type="primary", use_container_width=True)
                 if created:
                     try:
-                        register_user(config, first_name, last_name, email, password, password_confirm)
-                        st.success("Account created successfully. You can now log in.")
+                        username = register_user(config, first_name, last_name, email, password, password_confirm)
+                        st.session_state["app_user"] = username
+                        st.session_state["app_user_name"] = usernames[username]["name"]
+                        st.session_state["app_authenticated"] = True
+                        st.session_state["app_login_notice"] = "Account created successfully. You are now signed in."
+                        st.rerun()
                     except RegisterError as exc:
                         st.error(str(exc))
 
@@ -125,8 +129,11 @@ def _login_screen():
 
 def _authenticated_app():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    login_notice = st.session_state.pop("app_login_notice", None)
+    if login_notice:
+        st.success(login_notice)
     st.sidebar.title("🛡️ Privacy Defense")
-    st.sidebar.caption(f"Operator: `{st.session_state['app_user']}`")
+    st.sidebar.caption(f"Operator: `{st.session_state.get('app_user_name', st.session_state['app_user'])}`")
 
     pages = {
         "🛡️ Multi-Aspect Scanner": scanner_page,
@@ -154,6 +161,7 @@ def _authenticated_app():
     if st.sidebar.button("🚪 Log Out", use_container_width=True):
         st.session_state["app_authenticated"] = False
         st.session_state["app_user"] = ""
+        st.session_state.pop("app_user_name", None)
         st.rerun()
 
     # Render selected page

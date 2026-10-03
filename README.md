@@ -209,7 +209,9 @@ you don't need this layer.
 ### 5. Set up your login
 
 There is no default username or password. Start the app and use the
-**Create Account** tab, or create an account before launch with:
+**Create Account** tab; successful registration signs you in and opens
+the scanner. Existing users can log in to open the scanner directly.
+Alternatively, create an account before launch with:
 
 ```bash
 python3 scripts/manage_users.py add <username> "<Full Name>" <email>

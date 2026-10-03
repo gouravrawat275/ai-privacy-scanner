@@ -19,3 +19,5 @@ def test_first_account_can_be_registered_without_existing_config(monkeypatch, tm
 
     loaded_config = credentials.load_config()
     assert username in loaded_config["credentials"]["usernames"]
+    assert loaded_config["credentials"]["usernames"][username]["name"] == "Test User"
+    assert loaded_config["credentials"]["usernames"][username]["email"] == "test@example.com"
