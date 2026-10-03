@@ -142,7 +142,7 @@ def _authenticated_app():
         "🔐 Cryptographic Vault (Aspect D)": crypto_page,
         "📈 Pattern Intelligence (Aspect A)": pattern_page,
         "📊 Intelligence Dashboard": dashboard_page,
-        "📜 Patent Architecture & Claims": patent_page,
+        "📜 Architecture & Technical Claims": patent_page,
     }
 
     current_page_label = st.sidebar.radio("Navigation", list(pages.keys()), index=0)

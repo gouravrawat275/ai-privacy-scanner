@@ -10,7 +10,7 @@ import streamlit as st
 
 
 def patent_page():
-    st.header("📜 Patent Architecture & Technical Disclosure")
+    st.header("📜 Architecture & Technical Claims")
     st.caption(
         "PROVISIONAL PATENT APPLICATION TECHNICAL DISCLOSURE: "
         "System and Methods for Predictive, Cross-Session, Consent-Aware, and Cryptographically Reversible Privacy Protection for Digital Photographs"
