@@ -208,19 +208,17 @@ you don't need this layer.
 
 ### 5. Set up your login
 
-A default `admin` / `changeme123` account ships in `auth_config.yaml`
-so the app works immediately — **change that password before using
-this for anything real**:
+There is no default username or password. Start the app and use the
+**Create Account** tab, or create an account before launch with:
 
 ```bash
-python3 scripts/manage_users.py set-password admin
-python3 scripts/manage_users.py regenerate-cookie-key   # invalidates Streamlit sessions
-python3 scripts/manage_users.py regenerate-api-key       # invalidates REST API tokens
+python3 scripts/manage_users.py add <username> "<Full Name>" <email>
 ```
 
-Both regenerate commands matter for the same reason: the shipped
-defaults are in this README, so anyone with a copy of this project has
-them too. See Accounts & Dashboard below for what each one protects.
+`auth_config.yaml` stores password hashes and the API signing key and is
+gitignored. On Streamlit Community Cloud, the first account can be
+created from the sign-up tab; accounts stored in the app's local
+filesystem may need to be recreated after a rebuild.
 
 Need more accounts? Anyone who can reach the app can create their own
 via the "Sign up" tab (or `POST /register` on the API) — no CLI step
@@ -387,17 +385,9 @@ python3 scripts/manage_users.py regenerate-cookie-key   # Streamlit sessions
 python3 scripts/manage_users.py regenerate-api-key       # REST API tokens
 ```
 
-**Do these three things before relying on this for anything real:**
-1. `set-password admin` — the shipped default (`changeme123`) is public,
-   it's in this README.
-2. `regenerate-cookie-key` — the shipped signing key is equally public;
-   anyone with a copy of this project could otherwise forge a valid
-   login cookie for the Streamlit app. Regenerating invalidates all
-   existing sessions.
-3. `regenerate-api-key` — same problem, for the REST API's tokens
-   instead of the Streamlit app's cookie. Deliberately a separate
-   secret from the cookie key, so rotating one doesn't affect the
-   other. Regenerating invalidates all existing bearer tokens.
+There are no shipped accounts or credentials. The auth config is
+created when the first account is added and stays local; keep it
+gitignored so password hashes and the API signing key are not published.
 
 Credentials live in `auth_config.yaml` (bcrypt hashes and signing keys,
 never plaintext passwords). It's gitignored by default — if you fork

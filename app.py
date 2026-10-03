@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 
-from modules.credentials import RegisterError, load_config, register_user, verify_password
+from modules.credentials import RegisterError, load_or_init_config, register_user, verify_password
 from ui import (
     scanner_page,
     live_camera_page,
@@ -74,30 +74,28 @@ def _login_screen():
     st.title("🛡️ AI Privacy Scanner & Defense System")
     st.caption("Provisional Patent Implementation: Predictive, Cross-Session, Consent-Aware, and Cryptographically Reversible Privacy Protection.")
 
+    config = load_or_init_config()
+    usernames = config["credentials"]["usernames"]
     col_login, col_info = st.columns([3, 2])
 
     with col_login:
         login_tab, signup_tab = st.tabs(["🔐 Log In", "📝 Create Account"])
 
         with login_tab:
+            if not usernames:
+                st.info("No account is configured yet. Select Create Account to register the first account.")
+
             with st.form("login_form"):
-                username = st.text_input("Email / username", value="admin")
-                password = st.text_input("Password", type="password", value="Admin@123")
+                username = st.text_input("Email / username")
+                password = st.text_input("Password", type="password")
                 submitted = st.form_submit_button("Log In", type="primary", use_container_width=True)
                 if submitted:
-                    config = load_config()
                     if verify_password(username, password, config):
                         st.session_state["app_user"] = username
                         st.session_state["app_authenticated"] = True
                         st.rerun()
                     else:
                         st.error("Invalid username or password.")
-
-            st.markdown("---")
-            if st.button("⚡ 1-Click Fast Demo Operator Login", use_container_width=True):
-                st.session_state["app_user"] = "admin"
-                st.session_state["app_authenticated"] = True
-                st.rerun()
 
         with signup_tab:
             with st.form("signup_form"):
@@ -108,7 +106,6 @@ def _login_screen():
                 password_confirm = st.text_input("Confirm password", type="password")
                 created = st.form_submit_button("Create Account", type="primary", use_container_width=True)
                 if created:
-                    config = load_config()
                     try:
                         register_user(config, first_name, last_name, email, password, password_confirm)
                         st.success("Account created successfully. You can now log in.")
