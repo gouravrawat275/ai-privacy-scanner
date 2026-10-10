@@ -1,14 +1,12 @@
 import os
 import sqlite3
 from datetime import datetime, timezone
-
-from modules.database import connect_database
-
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'scan_history.db')
 SCHEMA = '\nCREATE TABLE IF NOT EXISTS scans (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    timestamp TEXT NOT NULL,\n    username TEXT NOT NULL,\n    filename TEXT,\n    risk_score INTEGER,\n    risk_level TEXT,\n    num_faces INTEGER,\n    num_plates INTEGER,\n    num_ocr_findings INTEGER,\n    has_gps INTEGER,\n    possible_minor INTEGER\n)\n'
 
 def _connect():
-    conn = connect_database(DB_PATH)
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
     conn.execute(SCHEMA)
     return conn
 
@@ -34,27 +32,9 @@ def get_recent(username, limit=50):
 def get_stats(username):
     conn = _connect()
     try:
-        total_row = conn.execute(
-            'SELECT COUNT(*) AS total FROM scans WHERE username = ?',
-            (username,),
-        ).fetchone()
-        avg_row = conn.execute(
-            'SELECT AVG(risk_score) AS avg_score FROM scans WHERE username = ?',
-            (username,),
-        ).fetchone()
-        level_rows = conn.execute(
-            'SELECT risk_level, COUNT(*) AS count FROM scans WHERE username = ? GROUP BY risk_level',
-            (username,),
-        ).fetchall()
-        total = total_row["total"] if isinstance(total_row, dict) else total_row[0]
-        avg_score = (
-            avg_row["avg_score"] if isinstance(avg_row, dict) else avg_row[0]
-        ) or 0
-        by_level = (
-            {row["risk_level"]: row["count"] for row in level_rows}
-            if level_rows and isinstance(level_rows[0], dict)
-            else dict(level_rows)
-        )
+        total = conn.execute('SELECT COUNT(*) FROM scans WHERE username = ?', (username,)).fetchone()[0]
+        avg_score = conn.execute('SELECT AVG(risk_score) FROM scans WHERE username = ?', (username,)).fetchone()[0] or 0
+        by_level = dict(conn.execute('SELECT risk_level, COUNT(*) FROM scans WHERE username = ? GROUP BY risk_level', (username,)).fetchall())
         return {'total_scans': total, 'avg_risk_score': round(avg_score, 1), 'by_level': by_level}
     finally:
         conn.close()

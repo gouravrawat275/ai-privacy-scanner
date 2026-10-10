@@ -1,4 +1,3 @@
-import os
 import json
 import tempfile
 import base64
@@ -8,8 +7,7 @@ import numpy as np
 import jwt
 from fastapi import FastAPI, File, UploadFile, Form, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from fastapi.responses import JSONResponse, RedirectResponse, Response
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
@@ -485,16 +483,3 @@ def history(limit: int = 50, username: str = Depends(get_current_username)):
         "stats": get_stats(username),
         "recent": get_recent(username, limit=min(limit, 200)),
     }
-
-
-@app.get("/", include_in_schema=False)
-def frontend():
-    return RedirectResponse(url="/index.html", status_code=307)
-
-
-if not os.environ.get("VERCEL"):
-    app.mount(
-        "/",
-        StaticFiles(directory=os.path.join(os.path.dirname(__file__), "public"), html=True),
-        name="frontend",
-    )

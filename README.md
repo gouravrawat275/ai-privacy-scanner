@@ -275,39 +275,6 @@ NEW_TOKEN=$(curl -s -X POST http://localhost:8000/refresh \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 ```
 
-### Deploy the browser app to Vercel
-
-The Vercel deployment serves a browser-based interface from `public/` and
-runs the existing FastAPI endpoints through Vercel's Python runtime. The
-Streamlit interface remains available for local use; both interfaces use
-the same scanner and privacy engines.
-
-1. Create a Neon PostgreSQL database and copy its pooled connection string.
-2. Import this GitHub repository into Vercel. No framework override or build
-   command is needed; `pyproject.toml` selects `api:app`.
-3. Add `DATABASE_URL` to the Vercel project's Production, Preview, and
-   Development environment variables, then redeploy. The app creates its
-   PostgreSQL tables automatically.
-4. Open the Vercel deployment URL and create an account.
-
-Vercel's filesystem is ephemeral, so `DATABASE_URL` is required there.
-Account password hashes, the API signing key, consent registry, pattern
-history, and scan summary history are stored in PostgreSQL. Uploaded images
-are processed by the API and are not written to those tables. The hosted
-deployment does receive images submitted for scanning; deploy only if you
-trust the hosting account and review its data-retention and access settings.
-
-**OCR note:** the Python OCR integration requires the Tesseract executable.
-Vercel's standard Python runtime does not install that system binary, so the
-browser interface explicitly reports OCR errors when it cannot run. Other
-scan, redaction, consent, history, pattern, camera-evaluation, and vault
-features remain available. For OCR on Vercel, use a runtime that includes
-Tesseract or configure a separately managed OCR service.
-
-Camera access requires HTTPS (Vercel deployments use HTTPS). The viewfinder
-does not continuously upload video: a still frame is sent only after the
-operator selects **Evaluate frame**.
-
 - `POST /register` — email/name/password → same response shape as
   `/login` (creates the account and logs it in immediately). Email
   doubles as the username. Same password policy as the Streamlit

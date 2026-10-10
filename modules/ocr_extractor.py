@@ -40,29 +40,24 @@ class OCRExtractor:
             return {'enabled': False, 'raw_text': '', 'findings': []}
 
         text = ""
-        ocr_error = None
         # 1. Try winocr on Windows first if available
         if _WINOCR_OK:
             try:
                 res = winocr.recognize_cv2_sync(image_bgr)
                 text = res.get('text', '') if isinstance(res, dict) else str(res)
-            except Exception as exc:
+            except Exception:
                 text = ""
-                ocr_error = str(exc)
 
         # 2. Try pytesseract as fallback or alternative
         if not text and _TESSERACT_OK:
             img_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
             try:
                 text = pytesseract.image_to_string(img_rgb)
-            except Exception as exc:
-                ocr_error = str(exc)
+            except Exception:
+                pass
 
         if not text:
-            result = {'enabled': True, 'raw_text': '', 'findings': []}
-            if ocr_error:
-                result['error'] = ocr_error
-            return result
+            return {'enabled': True, 'raw_text': '', 'findings': []}
 
         findings = []
         lower = text.lower()
