@@ -230,3 +230,90 @@ def test_aspect_e_pre_capture_risk_computation():
     assert any(b['category'] == 'Visual Location' for b in risk['breakdown'])
     assert any(b['category'] == 'Consent Gating' for b in risk['breakdown'])
     assert any(b['category'] == 'Cross-Session Pattern' for b in risk['breakdown'])
+
+
+def test_aspect_c_consent_expiration_handling():
+    """Verify Aspect C correctly identifies expired consent dates even when date strings are timezone-naive."""
+    test_db = os.path.join(os.path.dirname(__file__), '_test_consent_exp.db')
+    if os.path.exists(test_db):
+        try:
+            os.remove(test_db)
+        except OSError:
+            pass
+
+    registry = ConsentRegistry(db_path=test_db)
+    ref_face = np.full((80, 80, 3), 120, dtype=np.uint8)
+    sub_id = registry.register_subject(
+        name="Expired Subject",
+        consent_status="GRANTED",
+        valid_until="2020-01-01",  # clearly in the past, timezone-naive
+        reference_image_bgr=ref_face
+    )
+    assert sub_id is not None
+
+    eval_res = registry.evaluate_image_consent(
+        image_bgr=ref_face,
+        detected_faces=[{'bbox': [0, 0, 80, 80]}],
+        target_scope="social_media",
+        policy="STRICT"
+    )
+    assert eval_res['can_share'] is False
+    assert eval_res['face_decisions'][0]['consent_status'] == 'EXPIRED'
+    assert eval_res['faces_gated'] == 1
+
+    if os.path.exists(test_db):
+        try:
+            os.remove(test_db)
+        except OSError:
+            pass
+
+
+def test_aspect_a_custom_db_path():
+    """Verify PatternRiskEngine writes to the custom db path provided."""
+    test_db = os.path.join(os.path.dirname(__file__), '_test_custom_engine.db')
+    if os.path.exists(test_db):
+        try:
+            os.remove(test_db)
+        except OSError:
+            pass
+
+    engine = PatternRiskEngine(db_path=test_db)
+    assert engine.db_path == test_db
+    engine.record_scan("user_x", {'detections': {}, 'risk': {'score': 10}})
+    assert os.path.exists(test_db)
+    history = engine.get_history_summary("user_x")
+    assert len(history) == 1
+
+    if os.path.exists(test_db):
+        try:
+            os.remove(test_db)
+        except OSError:
+            pass
+
+
+def test_risk_analyzer_pattern_medium_and_visual_location():
+    """Verify compute_risk correctly maps MEDIUM pattern risk and extracts landmark names from findings."""
+    detections = {
+        'faces': [],
+        'plates': [],
+        'visual_location': {
+            'has_visual_location_risk': True,
+            'location_revealed': True,
+            'risk_score': 30,
+            'findings': [
+                {'type': 'landmark_match', 'inferred_location': 'Agra, India (Taj Mahal)', 'detail': 'Taj Mahal detected'},
+                {'type': 'address_detected', 'detail': 'Main St'}
+            ]
+        },
+        'pattern_risk': {
+            'risk_level': 'MEDIUM',
+            'detected_patterns': [{'detail': 'Same location on Mondays'}]
+        }
+    }
+    risk = compute_risk(detections)
+    assert risk['score'] > 20
+    vis_breakdown = next(b for b in risk['breakdown'] if b['category'] == 'Visual Location')
+    assert 'Taj Mahal' in vis_breakdown['detail']
+    pat_breakdown = next(b for b in risk['breakdown'] if b['category'] == 'Cross-Session Pattern')
+    assert 'MEDIUM' in pat_breakdown['detail']
+

@@ -5,6 +5,7 @@ Allows users to cryptographically obscure sensitive image regions using AES-256-
 and later decrypt and restore the exact original pixel values using an authorized key or passphrase.
 """
 
+import os
 import io
 import json
 import cv2
@@ -128,7 +129,7 @@ def crypto_page():
                     st.download_button(
                         "📥 Download PrivacyLock PNG Image",
                         data=embedded_png,
-                        file_name=f"privacylock_{uploaded.name.split('.')[0]}.png",
+                        file_name=f"privacylock_{os.path.splitext(uploaded.name)[0]}.png",
                         mime="image/png"
                     )
 
@@ -136,7 +137,7 @@ def crypto_page():
                     st.download_button(
                         "📄 Download Cryptographic Envelope (.json)",
                         data=envelope_json_str,
-                        file_name=f"privacylock_envelope_{uploaded.name.split('.')[0]}.json",
+                        file_name=f"privacylock_envelope_{os.path.splitext(uploaded.name)[0]}.json",
                         mime="application/json"
                     )
 

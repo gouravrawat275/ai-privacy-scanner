@@ -5,8 +5,8 @@ class MetadataScanner:
 
     def scan(self, image_path):
         try:
-            img = Image.open(image_path)
-            exif_data = img._getexif()
+            with Image.open(image_path) as img:
+                exif_data = img._getexif()
         except Exception:
             exif_data = None
         if not exif_data:
@@ -32,9 +32,8 @@ class MetadataScanner:
         return {'has_exif': True, 'has_gps': has_gps, 'findings': findings, 'raw': details}
 
     def strip_metadata(self, image_path, output_path):
-        img = Image.open(image_path)
-        data = list(img.getdata())
-        clean_img = Image.new(img.mode, img.size)
-        clean_img.putdata(data)
-        clean_img.save(output_path)
+        with Image.open(image_path) as img:
+            clean_img = Image.new(img.mode, img.size)
+            clean_img.paste(img)
+            clean_img.save(output_path)
         return output_path

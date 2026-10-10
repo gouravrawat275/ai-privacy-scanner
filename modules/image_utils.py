@@ -91,8 +91,16 @@ def apply_redactions(image_bgr, boxes, method='auto', padding=0.15, feather=True
 def draw_boxes(image_bgr, detections, color=(0, 0, 255), thickness=2):
     img = image_bgr.copy()
     for d in detections:
-        x, y, w, h = [int(v) for v in d['bbox']]
+        if isinstance(d, dict):
+            bbox = d.get('bbox')
+            label = d.get('label', d.get('type', ''))
+        else:
+            bbox = d
+            label = ''
+        if not bbox or len(bbox) < 4:
+            continue
+        x, y, w, h = [int(v) for v in bbox]
         cv2.rectangle(img, (x, y), (x + w, y + h), color, thickness)
-        label = d.get('label', d.get('type', ''))
-        cv2.putText(img, label, (x, max(15, y - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        if label:
+            cv2.putText(img, label, (x, max(15, y - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     return img

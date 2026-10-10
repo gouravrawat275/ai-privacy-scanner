@@ -110,9 +110,6 @@ def scanner_page():
     consent_gate_str = consent.get("overall_decision", "APPROVED")
     m5.metric("Consent Gate", consent_gate_str, delta=f"{consent.get('faces_gated', 0)} Gated", delta_color="inverse" if not consent.get("can_share", True) else "normal")
 
-    # Image preview + tabs
-    col_img, col_tabs = st.columns([1, 1])
-
     # Annotated HUD visualization
     annotated_bgr = img_bgr.copy()
     h_img, w_img = annotated_bgr.shape[:2]
@@ -258,7 +255,7 @@ def scanner_page():
             st.download_button(
                 "🚀 Download Safe Post Image",
                 data=sp_out.getvalue(),
-                file_name=f"safepost_{uploaded.name.split('.')[0]}.png",
+                file_name=f"safepost_{os.path.splitext(uploaded.name)[0]}.png",
                 mime="image/png",
                 type="primary"
             )
@@ -367,7 +364,7 @@ def scanner_page():
                 st.download_button(
                     "📥 Download PrivacyLock PNG Image",
                     data=embedded_png,
-                    file_name=f"privacylock_{uploaded.name.split('.')[0]}.png",
+                    file_name=f"privacylock_{os.path.splitext(uploaded.name)[0]}.png",
                     mime="image/png"
                 )
                 st.success(f"Encrypted {crypto_res['regions_count']} region(s). Restore anytime in the Cryptographic Vault.")

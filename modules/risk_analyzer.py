@@ -106,12 +106,25 @@ def compute_risk(detections):
             score += int(loc_score * 0.4)
             landmarks = vis_loc.get('inferred_landmarks', [])
             clues = vis_loc.get('visual_clues', [])
+            findings = vis_loc.get('findings', [])
             detail_items = []
             if landmarks:
                 detail_items.append(f"Landmark(s): {', '.join([l.get('name', '') for l in landmarks[:2]])}")
+            else:
+                landmark_matches = [f.get('inferred_location') or f.get('matched_keyword') for f in findings if f.get('type') == 'landmark_match']
+                if landmark_matches:
+                    detail_items.append(f"Landmark(s): {', '.join(filter(None, landmark_matches[:2]))}")
+
             if clues:
                 clue_types = {c.get('type', '') for c in clues}
                 detail_items.append(f"Visual clues: {', '.join(clue_types)}")
+            else:
+                other_clues = {f.get('type') for f in findings if f.get('type') != 'landmark_match'}
+                if other_clues:
+                    detail_items.append(f"Visual clues: {', '.join(sorted(other_clues))}")
+
+            if not detail_items and vis_loc.get('location_bucket'):
+                detail_items.append(f"Location: {vis_loc.get('location_bucket')}")
 
             breakdown.append({
                 'category': 'Visual Location',
@@ -122,15 +135,16 @@ def compute_risk(detections):
 
     # 8. Aspect A: Cross-Session Pattern Risk
     pat_risk = detections.get('pattern_risk', {})
-    if pat_risk and pat_risk.get('risk_level') in ('MODERATE', 'HIGH', 'CRITICAL'):
-        pts_map = {'MODERATE': 15, 'HIGH': 25, 'CRITICAL': 35}
-        pts = pts_map.get(pat_risk.get('risk_level'), 10)
+    pat_level = (pat_risk.get('risk_level') or pat_risk.get('pattern_level') or '').upper()
+    if pat_risk and pat_level in ('MODERATE', 'MEDIUM', 'HIGH', 'CRITICAL'):
+        pts_map = {'MODERATE': 15, 'MEDIUM': 15, 'HIGH': 25, 'CRITICAL': 35}
+        pts = pts_map.get(pat_level, 15)
         score += pts
-        patterns = pat_risk.get('detected_patterns', [])
-        pattern_summaries = [p.get('summary', '') for p in patterns[:2] if p.get('summary')]
+        patterns = pat_risk.get('detected_patterns') or pat_risk.get('patterns', [])
+        pattern_summaries = [p.get('detail') or p.get('summary', '') for p in patterns[:2] if (p.get('detail') or p.get('summary'))]
         breakdown.append({
             'category': 'Cross-Session Pattern',
-            'detail': f"{pat_risk.get('risk_level')} risk: {'; '.join(pattern_summaries) if pattern_summaries else 'Recurring temporal/spatial routine revealed across multiple images'}",
+            'detail': f"{pat_level} risk: {'; '.join(pattern_summaries) if pattern_summaries else 'Recurring temporal/spatial routine revealed across multiple images'}",
             'points': pts
         })
         suggestions.append('Cross-session analysis reveals recurring routine patterns. Posting multiple images from the same times/locations allows adversaries to map your schedule.')

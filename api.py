@@ -14,7 +14,7 @@ from typing import Optional, List, Dict, Any
 from modules.scanner import PrivacyScanner
 from modules.image_utils import apply_redactions
 from modules.scan_history import log_scan, get_recent, get_stats
-from modules.credentials import AuthConfigError, RegisterError, load_config, verify_password, register_user
+from modules.credentials import AuthConfigError, RegisterError, load_config, load_or_init_config, verify_password, register_user
 from modules.api_auth import create_access_token, create_refresh_token, decode_token
 
 # Patent modules
@@ -100,7 +100,7 @@ def _unauthorized(detail="Invalid or expired token"):
 
 def get_current_username(token: str = Depends(oauth2_scheme)) -> str:
     try:
-        config = load_config()
+        config = load_or_init_config()
         return decode_token(token, config, expected_type="access")
     except AuthConfigError:
         raise
@@ -129,13 +129,13 @@ def health():
 
 @app.post("/register", response_model=LoginResponse)
 def register(body: RegisterRequest):
-    config = load_config()
+    config = load_or_init_config()
     try:
         email = register_user(config, body.first_name, body.last_name, body.email, body.password, body.password_confirm)
     except RegisterError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    config = load_config()
+    config = load_or_init_config()
     return LoginResponse(
         access_token=create_access_token(email, config),
         refresh_token=create_refresh_token(email, config),
@@ -144,7 +144,7 @@ def register(body: RegisterRequest):
 
 @app.post("/login", response_model=LoginResponse)
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    config = load_config()
+    config = load_or_init_config()
     if not verify_password(form_data.username, form_data.password, config):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,7 +159,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @app.post("/refresh", response_model=TokenResponse)
 def refresh(body: RefreshRequest):
-    config = load_config()
+    config = load_or_init_config()
     try:
         username = decode_token(body.refresh_token, config, expected_type="refresh")
     except jwt.PyJWTError:
@@ -174,26 +174,33 @@ async def scan(
     consent_policy: str = Form("STRICT"),
     username: str = Depends(get_current_username)
 ):
-    suffix = "." + file.filename.split(".")[-1] if "." in file.filename else ".jpg"
+    suffix = os.path.splitext(file.filename)[1] or ".jpg"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
 
-    scanner = get_scanner()
-    image_bgr = cv2.imread(tmp_path)
-    if image_bgr is None:
-        raise HTTPException(status_code=400, detail="Could not read uploaded image.")
+    try:
+        scanner = get_scanner()
+        image_bgr = cv2.imread(tmp_path)
+        if image_bgr is None:
+            raise HTTPException(status_code=400, detail="Could not read uploaded image.")
 
-    result = scanner.scan_array(
-        image_bgr,
-        image_path=tmp_path,
-        username=username,
-        target_scope=target_scope,
-        consent_policy=consent_policy,
-        record_in_history=True
-    )
-    log_scan(username, file.filename, result)
-    return JSONResponse(content=json.loads(json.dumps(result, default=str)))
+        result = scanner.scan_array(
+            image_bgr,
+            image_path=tmp_path,
+            username=username,
+            target_scope=target_scope,
+            consent_policy=consent_policy,
+            record_in_history=True
+        )
+        log_scan(username, file.filename, result)
+        return JSONResponse(content=json.loads(json.dumps(result, default=str)))
+    finally:
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
 
 
 # --- Aspect B: Visual Location Inference Endpoint ---
@@ -334,7 +341,7 @@ async def crypto_obscure_endpoint(
         "X-Encrypted-Regions": str(result['regions_count']),
         "X-Key-Base64": result.get('key_b64') or "",
         "X-Salt-Base64": result.get('salt_b64') or "",
-        "Content-Disposition": f'attachment; filename="privacy_locked_{file.filename.split(".")[0]}.png"'
+        "Content-Disposition": f'attachment; filename="privacy_locked_{os.path.splitext(file.filename)[0]}.png"'
     }
     return Response(content=embedded_png, media_type="image/png", headers=headers)
 
@@ -437,30 +444,37 @@ async def redact(
     blur_plates: bool = Form(True),
     username: str = Depends(get_current_username),
 ):
-    suffix = "." + file.filename.split(".")[-1] if "." in file.filename else ".jpg"
+    suffix = os.path.splitext(file.filename)[1] or ".jpg"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
 
-    scanner = get_scanner()
-    result = _scan_or_400(scanner, tmp_path, username=username)
-    log_scan(username, file.filename, result)
+    try:
+        scanner = get_scanner()
+        result = _scan_or_400(scanner, tmp_path, username=username)
+        log_scan(username, file.filename, result)
 
-    image_bgr = cv2.imread(tmp_path)
-    boxes = []
-    if blur_faces:
-        boxes += result["detections"]["faces"]
-    if blur_plates:
-        boxes += result["detections"]["plates"]
+        image_bgr = cv2.imread(tmp_path)
+        boxes = []
+        if blur_faces:
+            boxes += result["detections"]["faces"]
+        if blur_plates:
+            boxes += result["detections"]["plates"]
 
-    image_bgr = apply_redactions(image_bgr, boxes, method=method, padding=padding)
+        image_bgr = apply_redactions(image_bgr, boxes, method=method, padding=padding)
 
-    ok, buf = cv2.imencode(".jpg", image_bgr)
-    if not ok:
-        return JSONResponse(status_code=500, content={"error": "encoding failed"})
+        ok, buf = cv2.imencode(".jpg", image_bgr)
+        if not ok:
+            return JSONResponse(status_code=500, content={"error": "encoding failed"})
 
-    headers = {"X-Risk-Score": str(result["risk"]["score"]), "X-Risk-Level": result["risk"]["level"]}
-    return Response(content=buf.tobytes(), media_type="image/jpeg", headers=headers)
+        headers = {"X-Risk-Score": str(result["risk"]["score"]), "X-Risk-Level": result["risk"]["level"]}
+        return Response(content=buf.tobytes(), media_type="image/jpeg", headers=headers)
+    finally:
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
 
 
 @app.get("/history")

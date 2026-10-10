@@ -415,11 +415,12 @@ class ConsentRegistry:
                 status = match['consent_status']
                 valid_until = match.get('valid_until')
 
-                # Check expiration
                 is_expired = False
                 if valid_until:
                     try:
                         exp_dt = datetime.fromisoformat(valid_until)
+                        if exp_dt.tzinfo is None:
+                            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
                         if exp_dt < now_dt:
                             is_expired = True
                     except Exception:

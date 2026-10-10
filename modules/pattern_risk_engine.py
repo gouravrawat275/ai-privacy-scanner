@@ -59,9 +59,10 @@ def _hour_bucket(hour):
         return 5   # night
 
 
-def _connect():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+def _connect(path=None):
+    target_path = path or DB_PATH
+    os.makedirs(os.path.dirname(os.path.abspath(target_path)), exist_ok=True)
+    conn = sqlite3.connect(target_path)
     conn.executescript(SCHEMA)
     return conn
 
@@ -69,11 +70,20 @@ def _connect():
 class PatternRiskEngine:
     """Evaluates accumulated scan history for recurrence patterns."""
 
+    DB_PATH = DB_PATH
+
     # Thresholds
     LOCATION_REPEAT_THRESHOLD = 3      # same location bucket seen >= N times
     TIME_PATTERN_THRESHOLD = 3          # same day+hour bucket >= N times
     ROUTINE_WINDOW_DAYS = 30            # look back N days
     OBJECT_REPEAT_THRESHOLD = 4         # same bg object type >= N times
+
+    def __init__(self, db_path=None):
+        self.db_path = db_path or getattr(self, 'DB_PATH', DB_PATH)
+
+    def _get_connection(self):
+        target = getattr(self, 'db_path', None) or getattr(self, 'DB_PATH', DB_PATH)
+        return _connect(target)
 
     def record_scan(self, username, scan_result, image_path=None):
         """Extract non-identifying attributes and append to history."""
@@ -113,7 +123,7 @@ class PatternRiskEngine:
             f"{username}:{now.isoformat()}:{location_bucket}".encode()
         ).hexdigest()[:16]
 
-        conn = _connect()
+        conn = self._get_connection()
         try:
             conn.execute(
                 """INSERT INTO pattern_history
@@ -138,7 +148,7 @@ class PatternRiskEngine:
         Evaluate accumulated history for the user and return a pattern-risk
         result containing detected patterns and an aggregate signal.
         """
-        conn = _connect()
+        conn = self._get_connection()
         conn.row_factory = sqlite3.Row
         try:
             cutoff = (datetime.now(timezone.utc) - timedelta(days=self.ROUTINE_WINDOW_DAYS)).isoformat()
@@ -255,7 +265,7 @@ class PatternRiskEngine:
 
     def get_history_summary(self, username, limit=20):
         """Return recent history entries (no image data, just attributes)."""
-        conn = _connect()
+        conn = self._get_connection()
         conn.row_factory = sqlite3.Row
         try:
             rows = conn.execute(
@@ -272,7 +282,7 @@ class PatternRiskEngine:
 
     def clear_history(self, username):
         """Allow user to clear their pattern history."""
-        conn = _connect()
+        conn = self._get_connection()
         try:
             conn.execute("DELETE FROM pattern_history WHERE username = ?", (username,))
             conn.commit()
