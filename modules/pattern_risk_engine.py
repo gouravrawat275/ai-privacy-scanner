@@ -16,6 +16,8 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from collections import Counter
 
+from modules.database import connect_database
+
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'pattern_history.db')
 
 SCHEMA = """
@@ -61,8 +63,7 @@ def _hour_bucket(hour):
 
 def _connect(path=None):
     target_path = path or DB_PATH
-    os.makedirs(os.path.dirname(os.path.abspath(target_path)), exist_ok=True)
-    conn = sqlite3.connect(target_path)
+    conn = connect_database(target_path)
     conn.executescript(SCHEMA)
     return conn
 

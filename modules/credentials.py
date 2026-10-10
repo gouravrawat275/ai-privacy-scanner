@@ -5,6 +5,8 @@ import secrets
 import bcrypt
 import yaml
 
+from modules.database import connect_database
+
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "auth_config.yaml")
 
 EMAIL_RE = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
@@ -19,6 +21,56 @@ class RegisterError(Exception):
     pass
 
 
+def _load_database_config():
+    conn = connect_database(CONFIG_PATH)
+    try:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS app_users ("
+            "username TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, "
+            "password TEXT NOT NULL)"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS app_settings ("
+            "setting_key TEXT PRIMARY KEY, setting_value TEXT NOT NULL)"
+        )
+        setting = conn.execute(
+            "SELECT setting_value FROM app_settings WHERE setting_key = ?",
+            ("api_secret_key",),
+        ).fetchone()
+        secret_key = setting["setting_value"] if setting else secrets.token_hex(32)
+        conn.execute(
+            "INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) "
+            "ON CONFLICT (setting_key) DO NOTHING",
+            ("api_secret_key", secret_key),
+        )
+        setting = conn.execute(
+            "SELECT setting_value FROM app_settings WHERE setting_key = ?",
+            ("api_secret_key",),
+        ).fetchone()
+        user_rows = conn.execute(
+            "SELECT username, name, email, password FROM app_users"
+        ).fetchall()
+        conn.commit()
+        return {
+            "credentials": {
+                "usernames": {
+                    row["username"]: {
+                        "name": row["name"],
+                        "email": row["email"],
+                        "password": row["password"],
+                    }
+                    for row in user_rows
+                }
+            },
+            "api": {
+                **_default_config()["api"],
+                "secret_key": setting["setting_value"],
+            },
+        }
+    finally:
+        conn.close()
+
+
 def _default_config():
     return {
         "credentials": {"usernames": {}},
@@ -28,6 +80,12 @@ def _default_config():
 
 
 def load_config():
+    if os.environ.get("VERCEL") and not os.environ.get("DATABASE_URL"):
+        raise AuthConfigError(
+            "DATABASE_URL is required on Vercel. Configure a Neon PostgreSQL connection string."
+        )
+    if os.environ.get("DATABASE_URL"):
+        return _load_database_config()
     if not os.path.exists(CONFIG_PATH):
         raise AuthConfigError(
             "No auth_config.yaml found. Run `python3 scripts/manage_users.py "
@@ -53,6 +111,12 @@ def load_config():
 
 
 def load_or_init_config():
+    if os.environ.get("VERCEL") and not os.environ.get("DATABASE_URL"):
+        raise AuthConfigError(
+            "DATABASE_URL is required on Vercel. Configure a Neon PostgreSQL connection string."
+        )
+    if os.environ.get("DATABASE_URL"):
+        return _load_database_config()
     if not os.path.exists(CONFIG_PATH):
         return _default_config()
     return load_config()
@@ -63,6 +127,34 @@ def save_config(config):
         "credentials": config["credentials"],
         "api": config["api"],
     }
+    if os.environ.get("VERCEL") and not os.environ.get("DATABASE_URL"):
+        raise AuthConfigError(
+            "DATABASE_URL is required on Vercel. Configure a Neon PostgreSQL connection string."
+        )
+    if os.environ.get("DATABASE_URL"):
+        conn = connect_database(CONFIG_PATH)
+        try:
+            conn.execute(
+                "INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) "
+                "ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value",
+                ("api_secret_key", clean["api"]["secret_key"]),
+            )
+            for username, entry in clean["credentials"]["usernames"].items():
+                conn.execute(
+                    "INSERT INTO app_users (username, name, email, password) VALUES (?, ?, ?, ?) "
+                    "ON CONFLICT (username) DO UPDATE SET name = EXCLUDED.name, "
+                    "email = EXCLUDED.email, password = EXCLUDED.password",
+                    (
+                        username,
+                        entry.get("name", ""),
+                        entry.get("email", username),
+                        entry["password"],
+                    ),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
     with open(CONFIG_PATH, "w") as f:
         yaml.dump(clean, f, default_flow_style=False, allow_unicode=True)
 

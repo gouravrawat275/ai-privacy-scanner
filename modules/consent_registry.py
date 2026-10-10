@@ -19,6 +19,7 @@ from typing import Dict, List, Any, Optional, Tuple
 import cv2
 import numpy as np
 
+from modules.database import connect_database
 
 DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'consent_registry.db')
 
@@ -115,13 +116,12 @@ class ConsentRegistry:
 
     def __init__(self, db_path: str = DEFAULT_DB_PATH):
         self.db_path = db_path
-        os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
         self.extractor = FaceEmbeddingExtractor()
         self._init_db()
 
     @contextmanager
     def _get_connection(self):
-        conn = sqlite3.connect(self.db_path)
+        conn = connect_database(self.db_path)
         conn.row_factory = sqlite3.Row
         try:
             yield conn
